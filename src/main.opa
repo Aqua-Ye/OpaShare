@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import stdlib.{blob}
+import stdlib.{upload}
 
 on_upload(data, res) =
   file =
