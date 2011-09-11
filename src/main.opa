@@ -69,5 +69,5 @@ main() =
   </div>
 
 server = Server.one_page_bundle("OpaShare",
-       [@static_resource_directory("resources")],
-       ["resources/style.css"], main)
+         [@static_resource_directory("resources")],
+         ["resources/style.css"], main)
