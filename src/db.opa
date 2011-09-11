@@ -1,1 +1,1 @@
-db /files : intmap(file)
+db /files : intmap(OpaShare.file)

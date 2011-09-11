@@ -18,46 +18,54 @@
 
 import stdlib.{upload}
 
-on_upload(data, res) =
-  file =
-    match data
-    ~{content filename fold_headers=_ name=_} ->
-      match content()
-      ~{content} -> some({
-        name = filename
-        size = String.length(content)
-        content = content
-        date_uploaded = Date.now()
-        date_downloaded = Date.now()
-        password = none
-      })
-      _ -> {none}
-      end
-    _ -> {none}
-  //do jlog("{file}")
-  //do init_upload()
-  do match file
-  ~{some} ->
-    key = Db.fresh_key(@/files)
-    do jlog("Uploaded @{key}")
-    /files[key] <- some
-  _ -> void
-  _ = init_upload() // @error Reentrant routine
-  res
+OpaShare = {{
 
-upload_config() = { Upload.default_config(void) with
-  fold_datas = on_upload
-} : Upload.config(void)
+  rec val upload_config = {
+    Upload.default_config() with
+    form_id = "share"
+    process = process_upload
+  } : Upload.config
 
-init_upload() =
-  Dom.transform([#upload <- Upload.make(upload_config())])
+  upload_done(key) =
+    do Dom.clear_value(Dom.select_raw("#upload_form > input[name=filename]"))
+    do Dom.transform([
+      #msg <- "Download your file @ http://localhost:8080/files/{key}",
+      #upload <- Upload.html(OpaShare.upload_config)
+    ])
+    void
+
+  process_upload(data) =
+    files = data.uploaded_files
+    StringMap.iter(
+      _, file ->
+        os_file = {
+          name = file.filename
+          size = String.length(file.content)
+          content = file.content
+          mimetype = file.mimetype
+          date_uploaded = Date.now()
+          date_downloaded = Date.now()
+          count = 0
+          password = none
+        } : OpaShare.file
+        key = Db.fresh_key(@/files)
+        do jlog("Uploaded @{key}")
+        do /files[key] <- os_file
+        upload_done(key)
+    , files)
+
+  upload_html() =
+    Upload.html(OpaShare.upload_config)
+
+}}
 
 main() =
   <div id=#header>
     <h1>Welcome to OpaShare</h1>
   </div>
   <div id=#content>
-    <div id=#upload onready={_->init_upload()}/>
+    <div id=#upload>{OpaShare.upload_html()}</div>
+    <div id=#msg></div>
   </div>
 
 server = Server.one_page_bundle("OpaShare",
